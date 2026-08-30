@@ -169,62 +169,50 @@ void write_event(int event, int val)
                 w_pressed = (val > 0);
                 update_stick();
                 return;
-
         case KEY_A:
                 a_pressed = (val > 0);
                 update_stick();
                 return;
-
         case KEY_S:
                 s_pressed = (val > 0);
                 update_stick();
                 return;
-
         case KEY_D:
                 d_pressed = (val > 0);
                 update_stick();
                 return;
-
         case KEY_UP:
                 printf("P1 up -> hat0y = -1\n");
                 emit_hat0y(val ? -1 : 0);
                 break;
-
         case KEY_DOWN:
                 printf("P1 down -> hat0y = 1\n");
                 emit_hat0y(val ? 1 : 0);
-                break;
-
+                return;
         case KEY_LEFT:
                 printf("P1 left -> hat0x = -1\n");
                 emit_hat0x(val ? -1 : 0);
-                break;
-
+                return;
         case KEY_RIGHT:
                 printf("P1 right -> hat0x = 1\n");
                 emit_hat0x(val ? 1 : 0);
-                break;
-
+                return;
         case KEY_LEFTCTRL:
                 printf("P1 button 1 -> South (A)\n");
                 emit_south(val);
-                break;
-
+                return;
         case KEY_LEFTALT:
                 printf("P1 button 2 -> East (B)\n");
                 emit_east(val);
-                break;
-
+                return;
         case KEY_SPACE:
                 printf("P1 bouton 3 -> North (Y)\n");
                 emit_north(val);
-                break;
-
+                return;
         case KEY_1:
                 printf("P1 Start -> Start\n");
                 emit_start(val);
-                break;
-
+                return;
         default:
                 return;
         }
