@@ -1,24 +1,14 @@
-CC      = gcc
-CFLAGS = -Wall -Wextra -Werror -std=gnu11
-LDFLAGS =
+CC = gcc
+CFLAGS = -Wall -Wextra
+TARGET = xkey
+SOURCES = main.c core.c virtual.c utils.c
 
-SRC     = main.c core.c virtual.c utils.c
-OBJ     = $(SRC:.c=.o)
-
-TARGET  = xkey
+.PHONY: all clean
 
 all: $(TARGET)
 
-$(TARGET): $(OBJ)
-	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
-
-%.o: %.c xkey.h
-	$(CC) $(CFLAGS) -c $< -o $@
+$(TARGET): $(SOURCES) xkey.h
+	$(CC) $(CFLAGS) -o $@ $(SOURCES)
 
 clean:
-	rm -f $(OBJ) $(TARGET)
-
-format:
-	git ls-files '*.c' '*.h' | xargs clang-format -i
-
-re: clean all
+	rm -f $(TARGET) *.o

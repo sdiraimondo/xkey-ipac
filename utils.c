@@ -1,40 +1,40 @@
 #include "xkey.h"
+#include <glob.h>
+
+int list_devices(void)
+{
+        glob_t matches;
+        size_t i;
+        int result;
+
+        result = glob("/dev/input/event*", 0, NULL, &matches);
+        if (result == GLOB_NOMATCH) {
+                fprintf(stderr, "No input event devices found.\n");
+                return -1;
+        }
+        if (result != 0) {
+                fprintf(stderr, "Unable to scan /dev/input/event*.\n");
+                return -1;
+        }
+
+        printf("Available input devices:\n");
+        for (i = 0; i < matches.gl_pathc; ++i) {
+                int fd = open(matches.gl_pathv[i], O_RDONLY | O_NONBLOCK);
+                char name[256] = "Unknown";
+                if (fd >= 0) {
+                        if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) < 0)
+                                snprintf(name, sizeof(name), "Unknown (%s)",
+                                         strerror(errno));
+                        close(fd);
+                }
+                printf("  %s: %s\n", matches.gl_pathv[i], name);
+        }
+        globfree(&matches);
+        return 0;
+}
 
 void handle_signal(int sig)
 {
-	(void)sig;
-	stop = 1;
-}
-
-int list_devices()
-{
-	struct dirent *de;
-	DIR *dr = opendir("/dev/input");
-	if (dr == NULL) {
-		perror("Could not open /dev/input");
-		return -1;
-	}
-
-	printf("Available input devices:\n");
-	printf("%-10s %-20s %s\n", "Event", "Name", "Path");
-	printf(
-	    "------------------------------------------------------------\n");
-
-	while ((de = readdir(dr)) != NULL) {
-		if (strncmp(de->d_name, "event", 5) == 0) {
-			char path[512];
-			char name[256] = "Unknown";
-			snprintf(path, sizeof(path), "/dev/input/%s",
-				 de->d_name);
-			int fd = open(path, O_RDONLY);
-			if (fd >= 0) {
-				ioctl(fd, EVIOCGNAME(sizeof(name)), name);
-				close(fd);
-			}
-			printf("%-10s %-20s %s\n", de->d_name + 5, name, path);
-		}
-	}
-
-	closedir(dr);
-	return 0;
+        (void)sig;
+        stop = 1;
 }
