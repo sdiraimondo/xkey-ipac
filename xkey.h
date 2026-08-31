@@ -19,9 +19,6 @@
 #define FALSE 0
 #endif
 
-#define XKEY_CONFIG_PATH "/etc/xkey.conf"
-#define XKEY_MAX_NAME 256
-
 extern int keyboard_fd;
 extern int xkey_fd;
 extern volatile sig_atomic_t stop;
@@ -46,10 +43,5 @@ void emit_lz(int val);
 void emit_rz(int val);
 void emit_start(int val);
 void emit_select(int val);
-
-/* Config / device discovery */
-int load_config_device_name(char *out_name, size_t out_size);
-int save_config_device_name(const char *name);
-int find_event_by_name(const char *name, char *out_path, size_t out_size);
 
 #endif
