@@ -4,6 +4,8 @@
 
 #define FULL 32767
 #define DIAGONAL 23170
+#define IS_PRESSED 1
+#define IS_RELEASED 0
 
 /* xkey_fd is the original (P1) uinput descriptor owned by main.c. */
 static int p2_fd = -1;
