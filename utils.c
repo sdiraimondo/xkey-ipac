@@ -21,11 +21,13 @@ int list_devices(void)
         for (i = 0; i < matches.gl_pathc; ++i) {
                 int fd = open(matches.gl_pathv[i], O_RDONLY | O_NONBLOCK);
                 char name[256] = "Unknown";
+
                 if (fd >= 0) {
-                        if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) < 0)
+                        if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) < 0) {
                                 snprintf(name, sizeof(name), "Unknown (%s)",
                                          strerror(errno));
-                                close(fd);
+                        }
+                        close(fd);
                 }
                 printf("  %s: %s\n", matches.gl_pathv[i], name);
         }
@@ -43,10 +45,10 @@ int load_config_device_name(char *out_name, size_t out_size)
 {
         FILE *f = fopen(XKEY_CONFIG_PATH, "r");
         char line[XKEY_MAX_NAME];
-        size_t len;
 
-        if (!f)
+        if (!f) {
                 return -1;
+        }
 
         if (!fgets(line, sizeof(line), f)) {
                 fclose(f);
@@ -54,13 +56,12 @@ int load_config_device_name(char *out_name, size_t out_size)
         }
         fclose(f);
 
-        len = strlen(line);
-        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
-                line[--len] = '\0';
-        }
+        /* strip trailing newline */
+        line[strcspn(line, "\r\n")] = '\0';
 
-        if (len == 0)
+        if (strlen(line) == 0) {
                 return -1;
+        }
 
         snprintf(out_name, out_size, "%s", line);
         return 0;
@@ -70,8 +71,11 @@ int save_config_device_name(const char *name)
 {
         FILE *f = fopen(XKEY_CONFIG_PATH, "w");
 
-        if (!f)
+        if (!f) {
+                fprintf(stderr, "Cannot write %s: %s\n",
+                        XKEY_CONFIG_PATH, strerror(errno));
                 return -1;
+        }
 
         fprintf(f, "%s\n", name);
         fclose(f);
@@ -83,31 +87,34 @@ int find_event_by_name(const char *name, char *out_path, size_t out_size)
         glob_t matches;
         size_t i;
         int result;
-        int found = -1;
 
         result = glob("/dev/input/event*", 0, NULL, &matches);
-        if (result != 0)
+        if (result != 0) {
                 return -1;
+        }
 
         for (i = 0; i < matches.gl_pathc; ++i) {
                 int fd = open(matches.gl_pathv[i], O_RDONLY | O_NONBLOCK);
-                char devname[XKEY_MAX_NAME];
+                char devname[XKEY_MAX_NAME] = "Unknown";
 
-                if (fd < 0)
+                if (fd < 0) {
                         continue;
+                }
 
-                if (ioctl(fd, EVIOCGNAME(sizeof(devname)), devname) >= 0) {
-                        if (strcmp(devname, name) == 0) {
-                                snprintf(out_path, out_size, "%s",
-                                         matches.gl_pathv[i]);
-                                close(fd);
-                                found = 0;
-                                break;
-                        }
+                if (ioctl(fd, EVIOCGNAME(sizeof(devname)), devname) < 0) {
+                        close(fd);
+                        continue;
                 }
                 close(fd);
+
+                if (strcmp(devname, name) == 0) {
+                        snprintf(out_path, out_size, "%s",
+                                 matches.gl_pathv[i]);
+                        globfree(&matches);
+                        return 0;
+                }
         }
 
         globfree(&matches);
-        return found;
+        return -1;
 }
