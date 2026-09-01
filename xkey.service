@@ -1,0 +1,14 @@
+[Unit]
+Description=xkey - Virtual Xbox 360 controller mapper
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/xkey
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
