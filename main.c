@@ -5,12 +5,17 @@ int xkey_fd;
 volatile sig_atomic_t stop;
 int toggled;
 
-int main()
+int main(int argc, char *argv[])
 {
         struct sigaction sa = {0};
         char dev[256];
         char devname[XKEY_MAX_NAME];
         int event_num;
+        int select_only = 0;
+
+        if (argc > 1 && strcmp(argv[1], "--select-only") == 0) {
+                select_only = 1;
+        }
 
         stop = 0;
         toggled = TRUE;
@@ -18,8 +23,9 @@ int main()
         sa.sa_handler = handle_signal;
         sigaction(SIGINT, &sa, NULL);
 
-        /* Try to use configured device first */
-        if (load_config_device_name(devname, sizeof(devname)) == 0) {
+        /* Try to use configured device first (skip if --select-only) */
+        if (!select_only &&
+            load_config_device_name(devname, sizeof(devname)) == 0) {
                 if (find_event_by_name(devname, dev, sizeof(dev)) == 0) {
                         printf("Using configured device: %s (%s)\n",
                                devname, dev);
@@ -69,6 +75,19 @@ manual_selection:
                                 }
                         }
                 }
+
+                if (select_only) {
+                        printf("Device selection complete. "
+                               "You can now start the service.\n");
+                        return EXIT_SUCCESS;
+                }
+        }
+
+        /* If we reach here via the "configured device found" path while
+         * select_only was set, nothing to do further (shouldn't happen
+         * since select_only forces manual_selection above). */
+        if (select_only) {
+                return EXIT_SUCCESS;
         }
 
         keyboard_fd = open(dev, O_RDONLY);
