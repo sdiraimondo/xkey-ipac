@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O2
 TARGET = xkey
-SRCS = main.c virtual.c
+SRCS = main.c core.c virtual.c utils.c
 OBJS = $(SRCS:.c=.o)
 
 PREFIX = /usr/local
