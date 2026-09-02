@@ -29,7 +29,7 @@ static int p1_start_pressed;
 static int p2_start_pressed;
 static int escape_down;
 
-/* ---- Debounce/hold synthesis for flaky Start buttons ---- */
+/* ---- Debounce/hold synthesis for flaky Start/Coin buttons ---- */
 typedef struct {
     int currently_held;
     int pending_release;
@@ -37,13 +37,14 @@ typedef struct {
     pthread_mutex_t lock;
     void (*emit_fn)(int val);
     void (*syn_fn)(void);
-    int *pressed_flag; /* mirrors state into p1_start_pressed/p2_start_pressed */
+    int *pressed_flag; /* mirrors state into p1_start_pressed/p2_start_pressed/etc */
 } DebouncedKey;
 
 static void syn_p1(void);
 static void emit_start_p1(int val);
 static void emit_start_p2_wrap(int val);
 static void syn_p2_wrap(void);
+static void emit_coin_p1(int val);
 
 static DebouncedKey p1_start_db = {
     .currently_held = 0,
@@ -53,6 +54,11 @@ static DebouncedKey p2_start_db = {
     .currently_held = 0,
     .pending_release = 0,
 };
+static DebouncedKey coin_db = {
+    .currently_held = 0,
+    .pending_release = 0,
+};
+static int coin_pressed;
 
 static pthread_t debounce_thread;
 static int debounce_thread_started = 0;
@@ -96,10 +102,10 @@ static void *debounce_watcher(void *arg)
     while (1) {
         usleep(50000);
 
-        DebouncedKey *keys[] = { &p1_start_db, &p2_start_db };
+        DebouncedKey *keys[] = { &p1_start_db, &p2_start_db, &coin_db };
         int i;
 
-        for (i = 0; i < 2; i++) {
+        for (i = 0; i < 3; i++) {
             DebouncedKey *dk = keys[i];
 
             pthread_mutex_lock(&dk->lock);
@@ -181,6 +187,8 @@ static void emit_start_p1(int val) { emit_start(val); }
 static void syn_p1(void) { syn(); }
 static void emit_start_p2_wrap(int val) { emit_p2_start(val); }
 static void syn_p2_wrap(void) { syn_p2(); }
+/* Coin (insert coin) mapped to BTN_SELECT on P1 pad */
+static void emit_coin_p1(int val) { emit_select(val); }
 
 static void update_stick(int fd, struct stick_state *stick)
 {
@@ -338,6 +346,11 @@ void setup_virtual_device(void)
     p2_start_db.syn_fn = syn_p2_wrap;
     p2_start_db.pressed_flag = &p2_start_pressed;
 
+    pthread_mutex_init(&coin_db.lock, NULL);
+    coin_db.emit_fn = emit_coin_p1;
+    coin_db.syn_fn = syn_p1;
+    coin_db.pressed_flag = &coin_pressed;
+
     if (pthread_create(&debounce_thread, NULL, debounce_watcher, NULL) == 0)
         debounce_thread_started = 1;
     else
@@ -381,11 +394,12 @@ void write_event(int event, int val)
         /* Flaky I-PAC hardware sends rapid press/release bursts while
          * held; synthesize a clean hold via handle_debounced_key(). */
         handle_debounced_key(&p1_start_db, pressed ? IS_PRESSED : IS_RELEASED);
-    	//p1_start_pressed = pressed;
-		//emit_start(val);
-		//syn();
-		//update_combo();
-		return;
+        return;
+    case KEY_5:
+        /* Coin mech input is flaky/noisy on this I-PAC; apply the same
+         * debounce/hold synthesis used for Start buttons. */
+        handle_debounced_key(&coin_db, pressed ? IS_PRESSED : IS_RELEASED);
+        return;
     default: break;
     }
 
@@ -400,11 +414,7 @@ void write_event(int event, int val)
     case KEY_Q: emit_p2_north(val); syn_p2(); return;
     case KEY_2:
         handle_debounced_key(&p2_start_db, pressed ? IS_PRESSED : IS_RELEASED);
-        //p2_start_pressed = pressed;
-		//emit_p2_start(val);
-		//syn_p2();
-		//update_combo();
-		return;
+        return;
     default: return;
     }
 }
